@@ -8,7 +8,7 @@ app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "https://code-space-frontend-qvz9.vercel.app",
     methods: ["GET", "POST"],
   },
 });
