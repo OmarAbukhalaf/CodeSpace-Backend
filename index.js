@@ -17,7 +17,7 @@ const MAX_ROOM_CAPACITY = 10;
 const roomData = {};
 const userRooms = {};
 let roomCount = 0;  
-
+let allRoomCount=0;
 const isValidRoomCredentials = (roomId, passcode) => {
   return (
     typeof roomId === 'string' && 
@@ -46,10 +46,11 @@ io.on("connection", (socket) => {
       users: new Set(),
       createdAt: Date.now()
     }; 
-    roomCount++;  // Increment the room creation count
+    roomCount++;  
+    allRoomCount++;
     console.log(`Room created: ${roomId}, Passcode: ${passcode}`);
     console.log(`Current room count: ${roomCount}`);  
-
+    console.log(`Total room count: ${allRoomCount}`);  
     socket.emit("roomCreated", { roomId, passcode });
     io.emit("roomCountUpdate", roomCount); 
   });
