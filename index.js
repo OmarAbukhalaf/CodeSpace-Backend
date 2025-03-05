@@ -13,12 +13,11 @@ const io = new Server(server, {
   },
 });
 
-const MAX_ROOM_CAPACITY = 10; // Limit room capacity
+const MAX_ROOM_CAPACITY = 10; 
 const roomData = {};
 const userRooms = {};
-let roomCount = 0;  // Variable to track the number of rooms created
+let roomCount = 0;  
 
-// Validate room ID and passcode format
 const isValidRoomCredentials = (roomId, passcode) => {
   return (
     typeof roomId === 'string' && 
@@ -28,7 +27,6 @@ const isValidRoomCredentials = (roomId, passcode) => {
   );
 };
 
-// Function to broadcast user count for a room
 const broadcastUserCount = (roomId) => {
   if (roomData[roomId]) {
     io.to(roomId).emit("userCountUpdate", roomData[roomId].users.size);
@@ -39,7 +37,6 @@ io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
   socket.on("createRoom", () => {
-    // Generate more secure random room ID and passcode
     const roomId = Math.random().toString(36).substring(2, 8);
     const passcode = Math.random().toString(36).substring(2, 8);
 
@@ -51,33 +48,30 @@ io.on("connection", (socket) => {
     }; 
     roomCount++;  // Increment the room creation count
     console.log(`Room created: ${roomId}, Passcode: ${passcode}`);
+    console.log(`Current room count: ${roomCount}`);  
 
     socket.emit("roomCreated", { roomId, passcode });
-    io.emit("roomCountUpdate", roomCount); // Broadcast the current room count to all clients
+    io.emit("roomCountUpdate", roomCount); 
   });
 
   socket.on("joinRoom", (data) => {
     const { roomId, passcode } = data;
 
-    // Validate input
     if (!isValidRoomCredentials(roomId, passcode)) {
       socket.emit("error", "Invalid room credentials");
       return;
     }
 
-    // Check if room exists
     if (!roomData[roomId]) {
       socket.emit("error", "Room does not exist.");
       return;
     }
 
-    // Check passcode
     if (roomData[roomId].passcode !== passcode) {
       socket.emit("error", "Incorrect passcode.");
       return;
     }
 
-    // Check room capacity
     if (roomData[roomId].users.size >= MAX_ROOM_CAPACITY) {
       socket.emit("error", "Room is full.");
       return;
@@ -89,10 +83,8 @@ io.on("connection", (socket) => {
 
     console.log(`User ${socket.id} joined room ${roomId}`);
 
-    // Broadcast the updated user count
     broadcastUserCount(roomId);
 
-    // Send current code to newly joined user
     socket.emit("codeUpdate", roomData[roomId].code);
   });
 
@@ -108,10 +100,10 @@ io.on("connection", (socket) => {
 
       if (roomData[roomId].users.size === 0) {
         delete roomData[roomId]; 
-        roomCount--;  // Decrease the room count when the room is deleted
+        roomCount--; 
         console.log(`Room ${roomId} deleted (empty)`);
 
-        io.emit("roomCountUpdate", roomCount); // Broadcast updated room count to all clients
+        io.emit("roomCountUpdate", roomCount);
       }
     }
   });
@@ -120,7 +112,6 @@ io.on("connection", (socket) => {
     const roomId = userRooms[socket.id];
 
     if (roomId && roomData[roomId]) {
-      // Optional: Add code size limit
       if (typeof newCode === 'string' && newCode.length <= 100000) {
         roomData[roomId].code = newCode;
         socket.to(roomId).emit("codeUpdate", newCode);
@@ -140,10 +131,10 @@ io.on("connection", (socket) => {
 
       if (roomData[roomId].users.size === 0) {
         delete roomData[roomId]; 
-        roomCount--;  // Decrease the room count when the room is deleted
+        roomCount--;  
         console.log(`Room ${roomId} deleted (empty)`);
 
-        io.emit("roomCountUpdate", roomCount); // Broadcast updated room count to all clients
+        io.emit("roomCountUpdate", roomCount); 
       }
     }
   });
