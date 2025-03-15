@@ -8,7 +8,7 @@ app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "https://codespaceapp.vercel.app",
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
@@ -17,7 +17,6 @@ const MAX_ROOM_CAPACITY = 10;
 const roomData = {};
 const userRooms = {};
 let roomCount = 0;  
-let allRoomCount=0;
 const isValidRoomCredentials = (roomId, passcode) => {
   return (
     typeof roomId === 'string' && 
@@ -47,10 +46,8 @@ io.on("connection", (socket) => {
       createdAt: Date.now()
     }; 
     roomCount++;  
-    allRoomCount++;
     console.log(`Room created: ${roomId}, Passcode: ${passcode}`);
-    console.log(`Current room count: ${roomCount}`);  
-    console.log(`Total room count: ${allRoomCount}`);  
+
     socket.emit("roomCreated", { roomId, passcode });
     io.emit("roomCountUpdate", roomCount); 
   });
@@ -59,23 +56,23 @@ io.on("connection", (socket) => {
     const { roomId, passcode } = data;
 
     if (!isValidRoomCredentials(roomId, passcode)) {
-      socket.emit("error", "Invalid room credentials");
-      return;
+        socket.emit("error", "Invalid room credentials");
+        return;
     }
 
     if (!roomData[roomId]) {
-      socket.emit("error", "Room does not exist.");
-      return;
+        socket.emit("error", "Room does not exist.");
+        return;
     }
 
     if (roomData[roomId].passcode !== passcode) {
-      socket.emit("error", "Incorrect passcode.");
-      return;
+        socket.emit("error", "Incorrect passcode.");
+        return;
     }
 
     if (roomData[roomId].users.size >= MAX_ROOM_CAPACITY) {
-      socket.emit("error", "Room is full.");
-      return;
+        socket.emit("error", "Room is full.");
+        return;
     }
 
     socket.join(roomId);
@@ -84,35 +81,67 @@ io.on("connection", (socket) => {
 
     console.log(`User ${socket.id} joined room ${roomId}`);
 
-    broadcastUserCount(roomId);
-
+    // Send the latest code to the rejoining user
     socket.emit("codeUpdate", roomData[roomId].code);
-  });
+
+    broadcastUserCount(roomId);
+});
 
   socket.on("leaveRoom", (data) => {
     const { roomId, passcode } = data;
 
     if (roomId && roomData[roomId]) {
-      roomData[roomId].users.delete(socket.id);
-      delete userRooms[socket.id];
+        roomData[roomId].users.delete(socket.id);
+        delete userRooms[socket.id];
 
-      socket.leave(roomId);
-      broadcastUserCount(roomId);
+        socket.leave(roomId);
+        broadcastUserCount(roomId);
 
-      if (roomData[roomId].users.size === 0) {
-        delete roomData[roomId]; 
-        roomCount--; 
-        console.log(`Room ${roomId} deleted (empty)`);
+        // Delay room deletion
+        if (roomData[roomId].users.size === 0) {
+            setTimeout(() => {
+                if (roomData[roomId] && roomData[roomId].users.size === 0) {
+                    delete roomData[roomId]; 
+                    roomCount--;  
+                    console.log(`Room ${roomId} deleted (empty after timeout)`);
 
-        io.emit("roomCountUpdate", roomCount);
-      }
+                    io.emit("roomCountUpdate", roomCount); 
+                }
+            }, 5000); // Wait 5 seconds before deleting
+        }
     }
-  });
+});
+
+socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+    const roomId = userRooms[socket.id];
+
+    if (roomId && roomData[roomId]) {
+        roomData[roomId].users.delete(socket.id);
+        delete userRooms[socket.id];
+
+        broadcastUserCount(roomId);
+
+        // Delay room deletion
+        if (roomData[roomId].users.size === 0) {
+            setTimeout(() => {
+                if (roomData[roomId] && roomData[roomId].users.size === 0) {
+                    delete roomData[roomId]; 
+                    roomCount--;  
+                    console.log(`Room ${roomId} deleted (empty after timeout)`);
+
+                    io.emit("roomCountUpdate", roomCount); 
+                }
+            }, 5000); // Wait 5 seconds before deleting
+        }
+    }
+});
 
   socket.on("codeChange", (newCode) => {
     const roomId = userRooms[socket.id];
 
     if (roomId && roomData[roomId]) {
+      
       if (typeof newCode === 'string' && newCode.length <= 100000) {
         roomData[roomId].code = newCode;
         socket.to(roomId).emit("codeUpdate", newCode);
