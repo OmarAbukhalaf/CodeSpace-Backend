@@ -81,7 +81,6 @@ io.on("connection", (socket) => {
 
     console.log(`User ${socket.id} joined room ${roomId}`);
 
-    // Send the latest code to the rejoining user
     socket.emit("codeUpdate", roomData[roomId].code);
 
     broadcastUserCount(roomId);
@@ -97,7 +96,6 @@ io.on("connection", (socket) => {
         socket.leave(roomId);
         broadcastUserCount(roomId);
 
-        // Delay room deletion
         if (roomData[roomId].users.size === 0) {
             setTimeout(() => {
                 if (roomData[roomId] && roomData[roomId].users.size === 0) {
@@ -107,7 +105,7 @@ io.on("connection", (socket) => {
 
                     io.emit("roomCountUpdate", roomCount); 
                 }
-            }, 5000); // Wait 5 seconds before deleting
+            }, 5000); 
         }
     }
 });
@@ -122,7 +120,6 @@ socket.on("disconnect", () => {
 
         broadcastUserCount(roomId);
 
-        // Delay room deletion
         if (roomData[roomId].users.size === 0) {
             setTimeout(() => {
                 if (roomData[roomId] && roomData[roomId].users.size === 0) {
@@ -132,7 +129,7 @@ socket.on("disconnect", () => {
 
                     io.emit("roomCountUpdate", roomCount); 
                 }
-            }, 5000); // Wait 5 seconds before deleting
+            }, 5000); 
         }
     }
 });
